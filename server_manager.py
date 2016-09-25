@@ -1,22 +1,13 @@
 from match_builder import build_match
-import argparse
+import begin
 
-def main():
-    print('sup')
-    args = parse_args()
-    print(args)
-    filename = build_match(tournament_id=args.tournamentid, match_id=args.matchid)
+@begin.start(short_args=True)
+def main(match_id: 'Challonge Match ID' = None, tournament_id: 'Mongo Tournament ID' = None):
+    """ CSGO server tools 4 CSGO Hub """
+    filename = build_match(tournament_id=tournament_id, match_id=match_id)
     print(filename)
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='CSGO server tools 4 CSGO Hub')
-    parser.add_argument('-m', '--matchid',
-                    help='Challonge match id', required=True)
-    parser.add_argument('-t', '--tournamentid',
-                    help='Mongo tournament id', required=True)
-
-    return parser.parse_args()
 
 if __name__ == '__main__':
     main()
