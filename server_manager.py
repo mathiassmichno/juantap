@@ -7,8 +7,6 @@ def main(match_id: 'Challonge Match ID' = None, tournament_id: 'Mongo Tournament
     filename = build_match(tournament_id=tournament_id, match_id=match_id)
     print(filename)
 
-
-
 if __name__ == '__main__':
     main()
 
