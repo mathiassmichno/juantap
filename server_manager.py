@@ -1,14 +1,25 @@
-from match_builder import build_match
-import begin
+import falcon
+import os
 
-@begin.start(short_args=True)
-def main(match_id: 'Challonge Match ID' = None, tournament_id: 'Mongo Tournament ID' = None):
-    """ CSGO server tools 4 CSGO Hub """
-    filename = build_match(tournament_id=tournament_id, match_id=match_id)
-    print(filename)
+class CsgoServer(object):
+    def on_get(self, req, resp):
+        resp.status = falcon.HTTP_200
+        resp.body = (os.urandom(1000))
 
-if __name__ == '__main__':
-    main()
+app = falcon.API()
 
-# 'X56hRniQBES5dCaQA'
-# '67948184'
+csgo_server = CsgoServer()
+
+app.add_route('/server', csgo_server)
+
+# from match_builder import build_match
+# import begin
+#
+# @begin.start(short_args=True)
+# def main(match_id: 'Challonge Match ID', tournament_id: 'Mongo Tournament ID'):
+#     """ CSGO server tools 4 CSGO Hub """
+#     filename = build_match(tournament_id=tournament_id, match_id=match_id)
+#     print(filename)
+#
+# # 'X56hRniQBES5dCaQA'
+# # '67948184'
