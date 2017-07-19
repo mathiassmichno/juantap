@@ -5,7 +5,7 @@ import click
 import requests
 import time
 
-script_folder="./scripts"
+script_folder=os.path.join(os.path.dirname(__file__), "scripts")
 lgsm_dl_url="https://gameservermanagers.com/dl/linuxgsm.sh"
 
 def _run_script(script="", path=None, args=(), action_msg=""):
