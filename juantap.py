@@ -4,12 +4,35 @@ import subprocess
 import click
 import requests
 import time
+from configparser import ConfigParser
+import getpass
 
+APP_DIR = click.get_app_dir('juantap')
+CONFIG_PATH = os.path.join(APP_DIR, 'config.ini')
+
+cfg = ConfigParser()
+
+def write_config():
+    global cfg
+    with open(CONFIG_PATH, 'w') as cfg_file:
+        cfg.write(cfg_file)
+
+
+if not os.path.exists(CONFIG_PATH):
+    os.makedirs(APP_DIR, exist_ok=True)
+    cfg['DEFAULT'] = {
+        'JuantapUser' : getpass.getuser(),
+        'RootServerDir' : os.path.expanduser('~/rootserver'),
+        'InstancesDir' : os.path.expanduser('~/instances'),
+        'NumberOfInstances' : 2,
+    }
+    write_config()
+
+cfg.read(CONFIG_PATH)
 script_folder=os.path.join(os.path.dirname(__file__), "scripts")
 lgsm_dl_url="https://gameservermanagers.com/dl/linuxgsm.sh"
 
 def _run_script(script="", path=None, args=(), action_msg=""):
-    #click.echo(action_msg)
     if not path:
         path = os.path.join(script_folder, script)
     try:
@@ -17,20 +40,27 @@ def _run_script(script="", path=None, args=(), action_msg=""):
     except subprocess.CalledProcessError as e:
         click.ClickException(e)
 
-class InstanceConfig(object):
-    def __init__(self):
-        self.servers = None
-        self.start_at = None
-        self.outdir = None
-
-pass_instance_config = click.make_pass_decorator(InstanceConfig, ensure=True)
-
 @click.group()
 def cli():
+    """
+    CLI for managing multiple csgo server instances and their root server.
+
+    Harnesses the power of overlayfs
+    """
     pass
 
+@cli.group(invoke_without_command=True, chain=True)
+@click.option('-e', is_flag=True, help='open config in editor')
+@click.pass_context
+def config(ctx, e):
+    if e:
+        click.edit(filename=os.path.join(APP_DIR, 'config.ini'))
+    else:
+        click.echo(ctx.get_help())
+
+
 @cli.command()
-@click.option('--dir', type=click.Path(), default='./rootserver')
+@click.option('--dir', type=click.Path(), default=cfg['DEFAULT']['RootServerDir'])
 @click.option('--install', is_flag=True)
 @click.confirmation_option(help='Are you sure you want to set up a rootserver?')
 def setup(dir, install):
@@ -41,6 +71,7 @@ def setup(dir, install):
     os.makedirs(dir, exist_ok=True)
     os.chdir(dir)
     lgsm_script_fname = 'linuxgsm.sh'
+    click.echo('Downloading Linux Game Server Manager Script')
     lgsm_script = requests.get(lgsm_dl_url, stream=True)
     with open(lgsm_script_fname, 'wb') as f:
         for chunk in lgsm_script.iter_content(chunk_size=1024):
@@ -51,61 +82,75 @@ def setup(dir, install):
     _run_script(path=lgsm_script_fname,
                 args=['csgoserver'])
     if install:
+        click.echo('Installing CS:GO in root server')
         csgoserver_script_fname = 'csgoserver.sh'
         _run_script(path=csgoserver_script_fname,
-                    args=['auto-install'],
-                    action_msg="INSTALLING CSGO")
+                    args=['auto-install'])
 
 @cli.group()
-@click.option('--num-servers', default=8)
-@click.option('--start-at', default=1)
-@click.option('--server-dir', type=click.Path(), default='./servers')
-@pass_instance_config
-def instances(config, num_servers, start_at, server_dir):
+@click.option('--instances-dir', type=click.Path(), default=cfg['DEFAULT']['InstancesDir'])
+@click.option('--num-instances', type=int, default=int(cfg['DEFAULT']['NumberOfInstances']))
+@click.option('--instance', '-i', multiple=True)
+@click.pass_context
+def instances(ctx, instances_dir, num_instances, instance):
     """
     Control server instances from here
     """
-    config.num_servers = num_servers
-    config.start_at = start_at
-    config.server_dir = server_dir
+    if instances_dir != cfg['DEFAULT']['InstancesDir']:
+        cfg['DEFAULT']['InstancesDir'] = instances_dir
+    ctx.obj = {'instances': instance if instance else ['{:02}'.format(i) for i in range(1, int(num_instances) + 1)]}
 
 @instances.command()
-@pass_instance_config
-def scaffold(config):
-    with click.progressbar(range(config.start_at, config.start_at + config.num_servers)) as bar:
-        for i in bar:
-            time.sleep(1)
-            os.makedirs(os.path.join(config.server_dir, '{:02}'.format(i)))
-            os.makedirs(os.path.join(config.server_dir, '.{:02}'.format(i), 'upper'))
-            os.makedirs(os.path.join(config.server_dir, '.{:02}'.format(i), 'work'))
+@click.pass_context
+def scaffold(ctx):
+    """
+    Scaffold the folders for instances, and config file entries
+    """
+    for instance in ctx.obj['instances']:
+        click.echo('Scaffolding instance {}'.format(instance))
+        os.makedirs(os.path.join(cfg['DEFAULT']['InstancesDir'], instance))
+        os.makedirs(os.path.join(cfg['DEFAULT']['InstancesDir'], instance, 'upper'))
+        os.makedirs(os.path.join(cfg['DEFAULT']['InstancesDir'], instance, 'work'))
+        cfg[instance] = {
+            'basePort': 27014 + int(instance),
+            'glst': '',
+            'Hostname': str(instance),
+        }
+    write_config()
 
 @instances.command()
-@click.option('--root-dir', type=click.Path(), default='./rootserver')
-@pass_instance_config
-def mount(config, root_dir):
-    with click.progressbar(range(config.start_at, config.start_at + config.num_servers)) as bar:
-        for i in bar:
-            _run_script(script="mount_server.sh",
-                        args=['{:02}'.format(i), root_dir, config.server_dir],
-                        action_msg="Mounting server {:02}".format(i))
+@click.option('--root-dir', type=click.Path(), default=cfg['DEFAULT']['RootServerDir'])
+@click.pass_context
+def mount(ctx, root_dir):
+    """
+    Mount instances to root server with overlayfs
+    """
+    for instance in ctx.obj['instances']:
+        click.echo('Mounting instance {}'.format(instance))
+        _run_script(script="mount_server.sh",
+                    args=[instance, root_dir, cfg['DEFAULT']['InstancesDir']])
 
 @instances.command()
 @click.confirmation_option(help='Are you sure you want to unmount?')
-@pass_instance_config
-def unmount(config):
-    with click.progressbar(range(config.start_at, config.start_at + config.num_servers)) as bar:
-        for i in bar:
-            _run_script(script="unmount_server.sh",
-                        args=['{:02}'.format(i), config.server_dir],
-                        action_msg="Unmounting server {:02}".format(i))
+@click.pass_context
+def unmount(ctx):
+    """
+    Unmount instances
+    """
+    for instance in ctx.obj['instances']:
+        click.echo('Unmounting instance {}'.format(instance))
+        _run_script(script="unmount_server.sh",
+                    args=[instance, cfg['DEFAULT']['InstancesDir']])
 
 @instances.command()
 @click.confirmation_option(help='Are you sure you want to remount?')
-@pass_instance_config
-def remount(config):
-    with click.progressbar(range(config.start_at, config.start_at + config.num_servers)) as bar:
-        for i in bar:
-            _run_script(script="remount_server.sh",
-                        args=['{:02}'.format(i), config.server_dir],
-                        action_msg="Remounting server {:02}".format(i))
+@click.pass_context
+def remount(ctx):
+    """
+    Remount instances, updates root server changes
+    """
+    for instance in ctx.obj['instances']:
+        click.echo('Remounting instance {}'.format(instance))
+        _run_script(script="remount_server.sh",
+                    args=[instance, cfg['DEFAULT']['InstancesDir']])
 
