@@ -1,6 +1,7 @@
 import os
 import stat
 import subprocess
+import shutil
 import click
 import requests
 import time
@@ -154,3 +155,14 @@ def remount(ctx):
         _run_script(script="remount_server.sh",
                     args=[instance, cfg['DEFAULT']['InstancesDir']])
 
+
+@instances.command()
+@click.pass_context
+def remove(ctx):
+    click.confirm('Remove instances: {}? (Cannot be reverted)'.format(ctx.obj['instances']), abort=True)
+    ctx.invoke(unmount)
+    for instance in ctx.obj['instances']:
+        click.echo('Removing instance {}'.format(instance))
+        shutil.rmtree(os.path.join(cfg['DEFAULT']['InstancesDir'], instance))
+        del cfg[instance]
+    write_config()
