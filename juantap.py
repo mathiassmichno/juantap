@@ -21,7 +21,7 @@ def write_config():
 
 if not os.path.exists(CONFIG_PATH):
     os.makedirs(APP_DIR, exist_ok=True)
-    cfg['DEFAULT'] = {
+    cfg['system'] = {
         'JuantapUser' : getpass.getuser(),
         'RootServerDir' : os.path.expanduser('~/rootserver'),
         'InstancesDir' : os.path.expanduser('~/instances'),
@@ -61,7 +61,7 @@ def config(ctx, e):
 
 
 @cli.command()
-@click.option('--dir', type=click.Path(), default=cfg['DEFAULT']['RootServerDir'])
+@click.option('--dir', type=click.Path(), default=cfg['system']['RootServerDir'])
 @click.option('--install', is_flag=True)
 @click.confirmation_option(help='Are you sure you want to set up a rootserver?')
 def setup(dir, install):
@@ -89,38 +89,57 @@ def setup(dir, install):
                     args=['auto-install'])
 
 @cli.group()
-@click.option('--instances-dir', type=click.Path(), default=cfg['DEFAULT']['InstancesDir'])
-@click.option('--num-instances', type=int, default=int(cfg['DEFAULT']['NumberOfInstances']))
+@click.option('--instances-dir', type=click.Path(), default=cfg['system']['InstancesDir'])
+@click.option('--num-instances', type=int, default=int(cfg['system']['NumberOfInstances']))
 @click.option('--instance', '-i', multiple=True)
 @click.pass_context
 def instances(ctx, instances_dir, num_instances, instance):
     """
     Control server instances from here
     """
-    if instances_dir != cfg['DEFAULT']['InstancesDir']:
-        cfg['DEFAULT']['InstancesDir'] = instances_dir
+    if instances_dir != cfg['system']['InstancesDir']:
+        cfg['system']['InstancesDir'] = instances_dir
     ctx.obj = {'instances': instance if instance else ['{:02}'.format(i) for i in range(1, int(num_instances) + 1)]}
 
 @instances.command()
 @click.pass_context
 def scaffold(ctx):
     """
-    Scaffold the folders for instances, and config file entries
+    Scaffold the folders for instances
     """
     for instance in ctx.obj['instances']:
         click.echo('Scaffolding instance {}'.format(instance))
-        os.makedirs(os.path.join(cfg['DEFAULT']['InstancesDir'], instance))
-        os.makedirs(os.path.join(cfg['DEFAULT']['InstancesDir'], instance, 'upper'))
-        os.makedirs(os.path.join(cfg['DEFAULT']['InstancesDir'], instance, 'work'))
-        cfg[instance] = {
-            'basePort': 27014 + int(instance),
-            'glst': '',
-            'Hostname': str(instance),
-        }
-    write_config()
+        os.makedirs(os.path.join(cfg['system']['InstancesDir'], instance))
+        os.makedirs(os.path.join(cfg['system']['InstancesDir'], instance, 'upper'))
+        os.makedirs(os.path.join(cfg['system']['InstancesDir'], instance, 'work'))
+
 
 @instances.command()
-@click.option('--root-dir', type=click.Path(), default=cfg['DEFAULT']['RootServerDir'])
+@click.pass_context
+def setup(ctx):
+    """
+    Setup instances
+    """
+    for instance in ctx.obj['instances']:
+        inst_dir = os.path.join(cfg['system']['InstancesDir'], instance)
+        csgoscript_path = os.path.join(inst_dir, 'csgoserver')
+        instscript_path = os.path.join(inst_dir, '{}'.format(instance))
+        shutil.copy2(csgoscript_path, instscript_path)
+        cfg[instance] = {
+            'port': 27015 + int(instance) * 100,
+            'clientport': 27005 + int(instance) * 100,
+            'sourcetvport': 27020 + int(instance) * 100,
+            'gslt': '"$(sed -n \'{}p\' ~/gslts.txt)"'.format(int(instance)),
+        }
+        instconfig_path = os.path.join(inst_dir, 'lgsm/config-lgsm/csgoserver/{}.cfg'.format(instance))
+        with open(instconfig_path, 'w') as file:
+            for k, v in cfg[instance].items():
+                print('{}={}'.format(k, v), file=file)
+    write_config()
+
+
+@instances.command()
+@click.option('--root-dir', type=click.Path(), default=cfg['system']['RootServerDir'])
 @click.pass_context
 def mount(ctx, root_dir):
     """
@@ -129,7 +148,8 @@ def mount(ctx, root_dir):
     for instance in ctx.obj['instances']:
         click.echo('Mounting instance {}'.format(instance))
         _run_script(script="mount_server.sh",
-                    args=[instance, root_dir, cfg['DEFAULT']['InstancesDir']])
+                    args=[instance, root_dir, cfg['system']['InstancesDir']])
+
 
 @instances.command()
 @click.confirmation_option(help='Are you sure you want to unmount?')
@@ -141,7 +161,8 @@ def unmount(ctx):
     for instance in ctx.obj['instances']:
         click.echo('Unmounting instance {}'.format(instance))
         _run_script(script="unmount_server.sh",
-                    args=[instance, cfg['DEFAULT']['InstancesDir']])
+                    args=[instance, cfg['system']['InstancesDir']])
+
 
 @instances.command()
 @click.confirmation_option(help='Are you sure you want to remount?')
@@ -153,7 +174,7 @@ def remount(ctx):
     for instance in ctx.obj['instances']:
         click.echo('Remounting instance {}'.format(instance))
         _run_script(script="remount_server.sh",
-                    args=[instance, cfg['DEFAULT']['InstancesDir']])
+                    args=[instance, cfg['system']['InstancesDir']])
 
 
 @instances.command()
@@ -163,6 +184,9 @@ def remove(ctx):
     ctx.invoke(unmount)
     for instance in ctx.obj['instances']:
         click.echo('Removing instance {}'.format(instance))
-        shutil.rmtree(os.path.join(cfg['DEFAULT']['InstancesDir'], instance))
-        del cfg[instance]
+        shutil.rmtree(os.path.join(cfg['system']['InstancesDir'], instance))
+        try:
+            del cfg[instance]
+        except:
+            pass #  Maybe the user deleted config section
     write_config()
