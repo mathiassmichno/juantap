@@ -37,7 +37,7 @@ def _run_script(script="", path=None, args=(), action_msg=""):
     if not path:
         path = os.path.join(script_folder, script)
     try:
-        subprocess.run([path, *args], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT, check=True)
+        subprocess.run([path, *args], stderr=subprocess.STDOUT, check=True)
     except subprocess.CalledProcessError as e:
         click.ClickException(e)
 
@@ -100,6 +100,16 @@ def instances(ctx, instances_dir, num_instances, instance):
     if instances_dir != cfg['system']['InstancesDir']:
         cfg['system']['InstancesDir'] = instances_dir
     ctx.obj = {'instances': instance if instance else ['{:02}'.format(i) for i in range(1, int(num_instances) + 1)]}
+
+
+@instances.command()
+@click.argument('command')
+@click.pass_context
+def cmd(ctx, command):
+    for instance in ctx.obj['instances']:
+        click.echo('Sending {} command to instance {}'.format(command, instance))
+        _run_script(path=os.path.join(cfg['system']['InstancesDir'], instance, instance),
+                    args=[command,])
 
 @instances.command()
 @click.pass_context
