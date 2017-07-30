@@ -59,18 +59,28 @@ def config(ctx, e):
     else:
         click.echo(ctx.get_help())
 
+@cli.group()
+@click.option('--dir/-d', 'root_dir', type=click.Path(), default=cfg['system']['RootServerDir'], help="Path to root server directory")
+@click.pass_context
+def root(ctx, root_dir):
+    """
+    Control server instances from here
+    """
+    if root_dir != cfg['system']['RootServerDir']:
+        cfg['system']['RootServerDir'] = root_dir
 
-@cli.command()
-@click.option('--dir', type=click.Path(), default=cfg['system']['RootServerDir'])
+@root.command()
 @click.option('--install', is_flag=True)
 @click.confirmation_option(help='Are you sure you want to set up a rootserver?')
-def setup(dir, install):
+@click.pass_context
+def setup(ctx, install):
     """
     Setup root server, see --help for more
     """
-    click.confirm('Set up root server in "{}"?'.format(dir), abort=True)
-    os.makedirs(dir, exist_ok=True)
-    os.chdir(dir)
+    root_dir = cfg['system']['RootServerDir']
+    click.confirm('Set up root server in "{}"?'.format(root_dir), abort=True)
+    os.makedirs(root_dir, exist_ok=True)
+    os.chdir(root_dir)
     lgsm_script_fname = 'linuxgsm.sh'
     click.echo('Downloading Linux Game Server Manager Script')
     lgsm_script = requests.get(lgsm_dl_url, stream=True)
