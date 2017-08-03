@@ -3,10 +3,10 @@ from setuptools import setup
 setup(
     name='juantap',
     version='0.1',
-    py_modules=['juantap'],
-    include_package_data=True,
+    packages=['juantap'],
     install_requires=[
-        'Click',
+        'click',
+        'sh'
     ],
     entry_points='''
         [console_scripts]
