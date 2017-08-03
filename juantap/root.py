@@ -59,9 +59,9 @@ def root_config(ctx, e, c):
         with open(os.path.join(server_cfg_dir, '_default.cfg'), 'r') as default_cfg:
             with open(os.path.join(server_cfg_dir, 'common.cfg'), 'w') as common_cfg:
                 for line in default_cfg:
-                    if "#### LinuxGSM Advanced Settings ####" in line:
+                    if "## Server Start Command" in line:
                         break
-                    print(line, file=common_cfg)
+                    common_cfg.write(line)
     if e:
         click.edit(filename=os.path.join(server_cfg_dir, 'common.cfg'))
     if not e or c:

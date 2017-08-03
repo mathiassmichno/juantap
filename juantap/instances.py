@@ -1,5 +1,6 @@
 import os
 import shutil
+import getpass
 import click
 import sh
 
@@ -38,8 +39,8 @@ def scaffold(ctx):
     for instance in ctx.obj['instances']:
         click.echo('Scaffolding instance {}'.format(instance))
         os.makedirs(os.path.join(CFG['system']['InstancesDir'], instance))
-        os.makedirs(os.path.join(CFG['system']['InstancesDir'], instance, 'upper'))
-        os.makedirs(os.path.join(CFG['system']['InstancesDir'], instance, 'work'))
+        os.makedirs(os.path.join(CFG['system']['InstancesDir'], '.' + instance, 'upper'))
+        os.makedirs(os.path.join(CFG['system']['InstancesDir'], '.' + instance, 'work'))
 
 
 @instances.command()
@@ -78,12 +79,15 @@ def mount(ctx, root_dir):
     """
     Mount instances to root server with overlayfs
     """
-    with sh.contrib.sudo:
-        for instance in ctx.obj['instances']:
-            click.echo('Mounting instance {}'.format(instance))
-            inst_path = os.path.join(CFG['system']['InstancesDir'], instance)
-            sh.mount("-t", "overlay", "-o", 
-                     "lowerdir={0},upperdir={1}/upper,workdir={1}/work".format(root_dir, inst_path),
+    click.echo('Sudo needed to mount instances')
+    password = getpass.getpass()
+    for instance in ctx.obj['instances']:
+        click.echo('Mounting instance {}'.format(instance))
+        inst_path = os.path.join(CFG['system']['InstancesDir'], instance)
+        inst_dot_path = os.path.join(CFG['system']['InstancesDir'], '.' + instance)
+        with sh.contrib.sudo(password=password, _with=True):
+            sh.mount("-t", "overlay", "-o",
+                     "lowerdir={0},upperdir={1}/upper,workdir={1}/work".format(root_dir, inst_dot_path),
                      "overlay", inst_path)
 
 
@@ -94,11 +98,13 @@ def unmount(ctx):
     """
     Unmount instances
     """
-    with sh.contrib.sudo:
-        for instance in ctx.obj['instances']:
-            click.echo('Unmounting instance {}'.format(instance))
-            inst_path = os.path.join(CFG['system']['InstancesDir'], instance)
-            sh.umount(inst_path)
+    click.echo('Sudo needed to unmount instances')
+    password = getpass.getpass()
+    for instance in ctx.obj['instances']:
+        click.echo('Unmounting instance {}'.format(instance))
+        inst_path = os.path.join(CFG['system']['InstancesDir'], instance)
+        with sh.contrib.sudo(password=password, _with=True):
+            sh.umount(inst_path, _ok_code=[0,32])
 
 
 @instances.command()
@@ -108,10 +114,12 @@ def remount(ctx):
     """
     Remount instances, updates root server changes
     """
-    with sh.contrib.sudo:
-        for instance in ctx.obj['instances']:
-            click.echo('Remounting instance {}'.format(instance))
-            inst_path = os.path.join(CFG['system']['InstancesDir'], instance)
+    click.echo('Sudo needed to remount instances')
+    password = getpass.getpass()
+    for instance in ctx.obj['instances']:
+        click.echo('Remounting instance {}'.format(instance))
+        inst_path = os.path.join(CFG['system']['InstancesDir'], instance)
+        with sh.contrib.sudo(password=password, _with=True):
             sh.mount("-o" "remount", inst_path)
         
 
