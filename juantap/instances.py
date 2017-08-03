@@ -1,6 +1,7 @@
 import os
 import shutil
 import getpass
+from functools import partial
 import click
 import sh
 
@@ -21,13 +22,18 @@ def instances(ctx, instances_dir, num_instances, instance):
 
 
 @instances.command()
+@click.option('-p', is_flag=True, help="Use pager to display command output")
 @click.argument('command')
 @click.pass_context
-def cmd(ctx, command):
+def cmd(ctx, p, command):
     for instance in ctx.obj['instances']:
-        click.echo('Sending {} command to instance {}'.format(command, instance))
+        click.echo('Sending "{}" command to instance {}'.format(command, instance))
         inst_script = sh.Command(os.path.join(CFG['system']['InstancesDir'], instance, instance))
-        inst_script(command)
+        if p:
+            click.echo_via_pager(inst_script(command))
+        else:
+            inst_script(command, _out=partial(click.echo, nl=False))
+
 
 
 @instances.command()
@@ -92,7 +98,6 @@ def mount(ctx, root_dir):
 
 
 @instances.command()
-@click.confirmation_option(help='Are you sure you want to unmount?')
 @click.pass_context
 def unmount(ctx):
     """
@@ -108,7 +113,6 @@ def unmount(ctx):
 
 
 @instances.command()
-@click.confirmation_option(help='Are you sure you want to remount?')
 @click.pass_context
 def remount(ctx):
     """
@@ -132,6 +136,7 @@ def remove(ctx):
     for instance in ctx.obj['instances']:
         click.echo('Removing instance {}'.format(instance))
         shutil.rmtree(os.path.join(CFG['system']['InstancesDir'], instance))
+        shutil.rmtree(os.path.join(CFG['system']['InstancesDir'], '.' + instance))
         try:
             del CFG[instance]
         except:
