@@ -1,4 +1,3 @@
-
 # Juantap 
 
 ## Get started
@@ -27,11 +26,17 @@
       * Thís will also tell which dependencies are missing, and offer to install them automatically
    * `juantap root setup --install` returns, without any errors, if any dependencies are missing
       * It is first when you try to run `juantap instances cmd start`, that it tells the dependencies are missing
-5. Copy common settings to the root server: `juantap root config -c`
-6. Scaffold instances: `juantap instances scaffold`
-7. Mount the instances: `juantap instances mount`
-8. Copy the settings to the instances: `juantap instances setup`	
-9. Start the CS servers: `juantap instances cmd start`
+5. Run `~/rootserver/csgoserver mods-install` and install the following mods:
+   * metamod
+   * sourcemod
+   * steamworks
+   * smjansson
+   * get5 
+6. Copy common settings to the root server: `juantap root config -c`
+7. Scaffold instances: `juantap instances scaffold`
+8. Mount the instances: `juantap instances mount`
+9. Copy the settings to the instances: `juantap instances setup`	
+10. Start the CS servers: `juantap instances cmd start`
 
 ## Usage
 * To control all instances: `juantap instances cmd xx`
@@ -64,4 +69,9 @@ auto-install  ai   | Install the server without prompts.
 developer     dev  | Enable developer Mode.
 
 ```
+
+## Usage with Challonge
+juantap can be used with a system which incorporate Challonge.
+This system can be found [here](http://csgo.michno.me).
+To use this system with juantap, juantap have to be running on a server with a public accessible IP.
 
