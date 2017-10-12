@@ -21,7 +21,7 @@ def root(ctx, root_dir):
 
 
 @root.command()
-@click.option('--install', is_flag=True)
+@click.option('--install', is_flag=True, help='Install Linux Game Server Manager')
 @click.confirmation_option(help='Are you sure you want to set up a rootserver?')
 @click.pass_context
 def setup(ctx, install):
