@@ -64,5 +64,5 @@ def root_config(ctx, e, c):
                     common_cfg.write(line)
     if e:
         click.edit(filename=os.path.join(server_cfg_dir, 'common.cfg'))
-    if not e or c:
+    if not e and not c:
         click.echo(ctx.get_help())
