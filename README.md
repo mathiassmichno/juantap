@@ -70,8 +70,14 @@ developer     dev  | Enable developer Mode.
 
 ```
 
-## Usage with Challonge
+## Integration with Challonge, i.e. automated tournament handling
 juantap can be used with a system which incorporate Challonge.
 This system can be found [here](http://csgo.michno.me).
 To use this system with juantap, juantap have to be running on a server with a public accessible IP.
+And have the following plugins installed (all should be installed on the root server, using the `mod-install` or `mi` command listed above):
+ - MetaMod (`metamod`)
+ - Sourcemod (`sourcemod`)
+ - get5 (`get5`), and get5_apistats, which will be in the `disabled` folder after installing get5
+ - SteamWorks (`steamworks`)
+ - SMJansson (`smjansson`)
 
