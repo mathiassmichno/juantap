@@ -4,6 +4,7 @@ setup(
     name='juantap',
     packages=['juantap'],
     version='0.1',
+    description='CLI for managing multiple dedicated CS:GO servers, based on a single root installation',
     author='Mathias Sass Michno',
     author_email='m@michno.me',
     install_requires=[
