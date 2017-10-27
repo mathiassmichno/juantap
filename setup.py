@@ -2,8 +2,10 @@ from setuptools import setup
 
 setup(
     name='juantap',
-    version='0.1',
     packages=['juantap'],
+    version='0.1',
+    author='Mathias Sass Michno',
+    author_email='m@michno.me',
     install_requires=[
         'click',
         'sh'
@@ -12,4 +14,6 @@ setup(
         [console_scripts]
         juantap=juantap:cli
     ''',
+    url='https://github.com/mathiassmichno/juantap',
+    keywords=['csgo', 'linuxgsm', 'server management', 'overlayfs'],
 )
