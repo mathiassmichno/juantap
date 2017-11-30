@@ -1,3 +1,4 @@
+"""Commands related to root server"""
 import os
 import stat
 import click

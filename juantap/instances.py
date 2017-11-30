@@ -1,3 +1,4 @@
+"""Commands for server instances"""
 import os
 import shutil
 import getpass
@@ -6,6 +7,7 @@ import click
 import sh
 
 from . import CFG, write_config
+
 
 @click.group()
 @click.option('--instances-dir', type=click.Path(), default=CFG['system']['InstancesDir'])
@@ -33,7 +35,6 @@ def cmd(ctx, p, command):
             click.echo_via_pager(inst_script(command))
         else:
             inst_script(command, _out=partial(click.echo, nl=False))
-
 
 
 @instances.command()
@@ -109,7 +110,7 @@ def unmount(ctx):
         click.echo('Unmounting instance {}'.format(instance))
         inst_path = os.path.join(CFG['system']['InstancesDir'], instance)
         with sh.contrib.sudo(password=password, _with=True):
-            sh.umount(inst_path, _ok_code=[0,32])
+            sh.umount(inst_path, _ok_code=[0, 32])
 
 
 @instances.command()
@@ -125,7 +126,6 @@ def remount(ctx):
         inst_path = os.path.join(CFG['system']['InstancesDir'], instance)
         with sh.contrib.sudo(password=password, _with=True):
             sh.mount("-o" "remount", inst_path)
-        
 
 
 @instances.command()
@@ -139,6 +139,6 @@ def remove(ctx):
         shutil.rmtree(os.path.join(CFG['system']['InstancesDir'], '.' + instance))
         try:
             del CFG[instance]
-        except:
-            pass #  Maybe the user deleted config section
+        except Exception as e:
+            pass  # Maybe the user deleted config section
     write_config()
